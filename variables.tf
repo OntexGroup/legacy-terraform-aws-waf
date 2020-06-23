@@ -28,3 +28,13 @@ variable "region" {
   type        = string
   description = "AWS region"
 }
+
+variable "logging" {
+  description = "This value is used to enable logging"
+  type        = map(string)
+  default = {
+    enabled        = false
+    s3_bucket_name = ""
+    s3_bucket_arn  = ""
+  }
+}
