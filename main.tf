@@ -72,9 +72,9 @@ resource "aws_iam_role_policy" "iam_role_policy" {
               ],
               "Resource": [
                   "${var.logging["s3_bucket_arn"]}",
-                  "${var.logging["s3_bucket_arn"]}/*",
+                  "${var.logging["s3_bucket_arn"]}//*",
                   "arn:aws:s3:::%FIREHOSE_BUCKET_NAME%",
-                  "arn:aws:s3:::%FIREHOSE_BUCKET_NAME%/*"
+                  "arn:aws:s3:::%FIREHOSE_BUCKET_NAME%//*"
               ]
           },
           {
@@ -427,4 +427,13 @@ resource "aws_wafv2_web_acl" "waf" {
     metric_name                = "${var.project}-${var.env}-waf-web-acl"
     sampled_requests_enabled   = true
   }
+
+  logging_configuration {
+    log_destination = aws_kinesis_firehose_delivery_stream.kinesis_firehose_delivery_stream.arn
+  }
+}
+
+resource "aws_wafv2_web_acl_association" "waf_association" {
+  resource_arn = var.alb
+  web_acl_arn  = aws_wafv2_web_acl.waf.arn
 }
