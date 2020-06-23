@@ -72,9 +72,9 @@ resource "aws_iam_role_policy" "iam_role_policy" {
               ],
               "Resource": [
                   "${var.logging["s3_bucket_arn"]}",
-                  "${var.logging["s3_bucket_arn"]}//*",
+                  "${var.logging["s3_bucket_arn"]}/*",
                   "arn:aws:s3:::%FIREHOSE_BUCKET_NAME%",
-                  "arn:aws:s3:::%FIREHOSE_BUCKET_NAME%//*"
+                  "arn:aws:s3:::%FIREHOSE_BUCKET_NAME%/*"
               ]
           },
           {
@@ -162,11 +162,11 @@ resource "aws_wafv2_web_acl" "waf" {
   }
 
   rule {
-    name     = "${var.project}-${var.env}-rule-ip-whitelist"
+    name     = "${var.project}-${var.env}-rule-rate-base-ban"
     priority = 0
 
-    override_action {
-      allow {}
+    action {
+      block {}
     }
 
     statement {
@@ -176,8 +176,17 @@ resource "aws_wafv2_web_acl" "waf" {
 
         scope_down_statement {
           not_statement  {
-            regex_pattern_set_reference_statement {
-              arn = aws_wafv2_regex_pattern_set.regex.arn
+            statement {
+              regex_pattern_set_reference_statement {
+                arn = aws_wafv2_regex_pattern_set.regex.arn
+                text_transformation {
+                  priority = 0
+                  type = "NONE"
+                }
+                field_to_match {
+                  uri_path {}
+                }
+              }
             }
           }
         }
@@ -186,16 +195,16 @@ resource "aws_wafv2_web_acl" "waf" {
 
     visibility_config {
       cloudwatch_metrics_enabled = true
-      metric_name                = "${var.project}-${var.env}-rule-ip-whitelist"
+      metric_name                = "${var.project}-${var.env}-rule-rate-base-ban"
       sampled_requests_enabled   = true
     }
   }
 
   rule {
     name     = "${var.project}-${var.env}-rule-ip-whitelist"
-    priority = 0
+    priority = 1
 
-    override_action {
+    action {
       allow {}
     }
 
@@ -215,22 +224,22 @@ resource "aws_wafv2_web_acl" "waf" {
 
   rule {
     name     = "${var.project}-${var.env}-rule-timeOne-allow"
-    priority = 1
+    priority = 2
 
-    override_action {
+    action {
       allow {}
     }
 
     statement {
       byte_match_statement  {
         field_to_match {
-          field_to_match {}
+          query_string {}
         }
         positional_constraint = "CONTAINS"
         search_string = "utm_source=TimeOne"
         text_transformation {
           priority = 0
-          type = "None"
+          type = "NONE"
         }
       }
     }
@@ -244,7 +253,7 @@ resource "aws_wafv2_web_acl" "waf" {
 
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
-    priority = 2
+    priority = 3
 
     override_action {
       none {}
@@ -285,7 +294,7 @@ resource "aws_wafv2_web_acl" "waf" {
 
   rule {
     name     = "AWSManagedRulesAnonymousIpList"
-    priority = 3
+    priority = 4
 
     override_action {
       none {}
@@ -311,7 +320,7 @@ resource "aws_wafv2_web_acl" "waf" {
 
   rule {
     name     = "AWSManagedRulesAmazonIpReputationList"
-    priority = 4
+    priority = 5
 
     override_action {
       none {}
@@ -333,7 +342,7 @@ resource "aws_wafv2_web_acl" "waf" {
 
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 5
+    priority = 6
 
     override_action {
       none {}
@@ -355,7 +364,7 @@ resource "aws_wafv2_web_acl" "waf" {
 
   rule {
     name     = "AWSManagedRulesPHPRuleSet"
-    priority = 6
+    priority = 7
 
     override_action {
       none {}
@@ -377,7 +386,7 @@ resource "aws_wafv2_web_acl" "waf" {
 
   rule {
     name     = "AWSManagedRulesLinuxRuleSet"
-    priority = 7
+    priority = 8
 
     override_action {
       none {}
@@ -399,7 +408,7 @@ resource "aws_wafv2_web_acl" "waf" {
 
   rule {
     name     = "AWSManagedRulesWordPressRuleSet"
-    priority = 8
+    priority = 9
 
     override_action {
       none {}
@@ -426,10 +435,6 @@ resource "aws_wafv2_web_acl" "waf" {
     cloudwatch_metrics_enabled = true
     metric_name                = "${var.project}-${var.env}-waf-web-acl"
     sampled_requests_enabled   = true
-  }
-
-  logging_configuration {
-    log_destination = aws_kinesis_firehose_delivery_stream.kinesis_firehose_delivery_stream.arn
   }
 }
 
